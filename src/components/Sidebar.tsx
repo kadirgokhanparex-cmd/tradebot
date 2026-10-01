@@ -8,7 +8,10 @@ import {
   Shield,
   Zap,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Activity,
+  BarChart3,
+  Gauge
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,7 +23,10 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'live', label: 'Canlı Aktivite', icon: Activity },
   { id: 'bots', label: 'Trading Botları', icon: Bot },
+  { id: 'market', label: 'Piyasa Analizi', icon: BarChart3 },
+  { id: 'indicators', label: 'İndikatörler', icon: Gauge },
   { id: 'history', label: 'İşlem Geçmişi', icon: History },
   { id: 'strategies', label: 'Stratejiler', icon: TrendingUp },
   { id: 'settings', label: 'Ayarlar', icon: Settings },
@@ -43,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, collapsed, s
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -51,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, collapsed, s
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                 isActive
                   ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800'
@@ -59,6 +65,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, collapsed, s
             >
               <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-yellow-500' : ''}`} />
               {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+              {item.id === 'live' && !collapsed && (
+                <div className="ml-auto w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              )}
             </button>
           );
         })}
@@ -70,11 +79,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, collapsed, s
           <div className="bg-gray-800 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-green-400 text-xs font-medium">Sistem Aktif</span>
+              <span className="text-green-400 text-xs font-medium">Testnet Bağlı</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-1">
               <Shield className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-400 text-xs">API Bağlı</span>
+              <span className="text-gray-400 text-xs">Binance Testnet</span>
+            </div>
+            <div className="text-gray-500 text-[10px] mt-2">
+              Bakiye: 100,000 USDT (Test)
             </div>
           </div>
         </div>

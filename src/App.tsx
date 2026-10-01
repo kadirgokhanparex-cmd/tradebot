@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
+import LiveActivityPanel from './components/LiveActivity';
 import Bots from './components/Bots';
+import MarketAnalyzer from './components/MarketAnalyzer';
+import IndicatorPanel from './components/IndicatorPanel';
 import TradeHistory from './components/TradeHistory';
 import Strategies from './components/Strategies';
 import Settings from './components/Settings';
@@ -14,8 +17,14 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
+      case 'live':
+        return <LiveActivityPanel />;
       case 'bots':
         return <Bots />;
+      case 'market':
+        return <MarketAnalyzer />;
+      case 'indicators':
+        return <IndicatorPanel />;
       case 'history':
         return <TradeHistory />;
       case 'strategies':

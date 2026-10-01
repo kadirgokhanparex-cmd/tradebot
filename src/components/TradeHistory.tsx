@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, Filter, Download, Search } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Filter, Download, Search, Zap, Shield } from 'lucide-react';
 import { mockTrades } from '../data';
 
 const TradeHistory: React.FC = () => {
@@ -17,12 +17,12 @@ const TradeHistory: React.FC = () => {
   const totalVolume = filteredTrades.reduce((sum, t) => sum + t.total, 0);
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto">
+    <div className="p-6 space-y-6 overflow-y-auto h-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">İşlem Geçmişi</h1>
-          <p className="text-gray-400 text-sm mt-1">Tüm bot işlemlerinizi görüntüleyin</p>
+          <p className="text-gray-400 text-sm mt-1">Tüm bot işlemlerinizi görüntüleyin - Spot ve Futures</p>
         </div>
         <button className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg transition-colors">
           <Download className="w-4 h-4" />
@@ -31,7 +31,7 @@ const TradeHistory: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
           <p className="text-gray-400 text-xs mb-1">Toplam İşlem</p>
           <p className="text-white text-xl font-bold">{filteredTrades.length}</p>
@@ -47,8 +47,12 @@ const TradeHistory: React.FC = () => {
           </p>
         </div>
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-          <p className="text-gray-400 text-xs mb-1">Başarı Oranı</p>
-          <p className="text-white text-xl font-bold">%{((filteredTrades.filter(t => t.profit > 0).length / Math.max(filteredTrades.filter(t => t.type === 'SELL').length, 1)) * 100).toFixed(1)}</p>
+          <p className="text-gray-400 text-xs mb-1">Spot İşlem</p>
+          <p className="text-blue-400 text-xl font-bold">{filteredTrades.filter(t => t.isSpot).length}</p>
+        </div>
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+          <p className="text-gray-400 text-xs mb-1">Futures İşlem</p>
+          <p className="text-purple-400 text-xl font-bold">{filteredTrades.filter(t => !t.isSpot).length}</p>
         </div>
       </div>
 
@@ -90,21 +94,22 @@ const TradeHistory: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-700/50">
-                <th className="text-left text-gray-400 text-xs font-medium px-5 py-3">Tür</th>
-                <th className="text-left text-gray-400 text-xs font-medium px-5 py-3">Bot</th>
-                <th className="text-left text-gray-400 text-xs font-medium px-5 py-3">Parite</th>
-                <th className="text-right text-gray-400 text-xs font-medium px-5 py-3">Fiyat</th>
-                <th className="text-right text-gray-400 text-xs font-medium px-5 py-3">Miktar</th>
-                <th className="text-right text-gray-400 text-xs font-medium px-5 py-3">Toplam</th>
-                <th className="text-right text-gray-400 text-xs font-medium px-5 py-3">Kar/Zarar</th>
-                <th className="text-right text-gray-400 text-xs font-medium px-5 py-3">Zaman</th>
-                <th className="text-center text-gray-400 text-xs font-medium px-5 py-3">Durum</th>
+                <th className="text-left text-gray-400 text-xs font-medium px-4 py-3">Tür</th>
+                <th className="text-left text-gray-400 text-xs font-medium px-4 py-3">Bot</th>
+                <th className="text-left text-gray-400 text-xs font-medium px-4 py-3">Parite</th>
+                <th className="text-center text-gray-400 text-xs font-medium px-4 py-3">Mod</th>
+                <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Fiyat</th>
+                <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Miktar</th>
+                <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Toplam</th>
+                <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Kar/Zarar</th>
+                <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Zaman</th>
+                <th className="text-center text-gray-400 text-xs font-medium px-4 py-3">Durum</th>
               </tr>
             </thead>
             <tbody>
               {filteredTrades.map((trade) => (
                 <tr key={trade.id} className="border-t border-gray-700/50 hover:bg-gray-700/30 transition-colors">
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3">
                     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                       trade.type === 'BUY' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                     }`}>
@@ -112,32 +117,43 @@ const TradeHistory: React.FC = () => {
                       {trade.type === 'BUY' ? 'AL' : 'SAT'}
                     </div>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3">
                     <span className="text-white text-sm">{trade.botName}</span>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-3">
                     <span className="text-white text-sm font-medium">{trade.pair}</span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-3 text-center">
+                    {trade.isSpot ? (
+                      <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded inline-flex items-center gap-0.5">
+                        <Shield className="w-3 h-3" />SPOT
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded inline-flex items-center gap-0.5">
+                        <Zap className="w-3 h-3" />{trade.leverage}x
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
                     <span className="text-white text-sm">${trade.price.toLocaleString()}</span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-3 text-right">
                     <span className="text-gray-300 text-sm">{trade.amount}</span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-3 text-right">
                     <span className="text-white text-sm">${trade.total.toLocaleString()}</span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-3 text-right">
                     <span className={`text-sm font-medium ${
                       trade.profit > 0 ? 'text-green-400' : trade.profit < 0 ? 'text-red-400' : 'text-gray-400'
                     }`}>
                       {trade.profit > 0 ? '+' : ''}{trade.profit.toFixed(2)}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-3 text-right">
                     <span className="text-gray-400 text-xs">{trade.timestamp}</span>
                   </td>
-                  <td className="px-5 py-3 text-center">
+                  <td className="px-4 py-3 text-center">
                     <span className={`inline-block w-2 h-2 rounded-full ${
                       trade.status === 'completed' ? 'bg-green-500' : trade.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
                     }`} />
