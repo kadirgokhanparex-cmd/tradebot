@@ -124,13 +124,17 @@ export class AutoTradingEngine {
 
   private async analyzeAndExecute(symbol: string): Promise<'strong' | 'medium' | 'none'> {
     try {
-      // Kline verisi al
+      console.log(`🔍 ${symbol} analiz ediliyor...`);
+      
+      // Kline verisi al (mock data fallback ile)
       const klines = await binanceAPI.getKlines(symbol, '1h', 100);
 
       if (!klines || klines.length === 0) {
         console.warn(`⚠️ ${symbol} için veri alınamadı`);
         return 'none';
       }
+
+      console.log(`✅ ${symbol} için ${klines.length} kline alındı`);
 
       // CandleData formatına çevir
       const candles: CandleData[] = klines.map(k => ({
@@ -142,19 +146,24 @@ export class AutoTradingEngine {
         timestamp: k.openTime,
       }));
 
-      // Piyasa analizi
+      // Piyasa analizi - 12 indikatör
       const analysis = analyzeMarket(candles, symbol);
 
-      console.log(`📊 ${symbol}: ${analysis.overallSignal} (Güven: %${analysis.confidence})`);
+      console.log(`📊 ${symbol}: ${analysis.overallSignal} (Güven: %${analysis.confidence.toFixed(0)})`);
+      console.log(`   RSI: ${analysis.rsi.value.toFixed(1)} (${analysis.rsi.signal})`);
+      console.log(`   MACD: ${analysis.macd.value.toFixed(2)} (${analysis.macd.signal})`);
+      console.log(`   ADX: ${analysis.adx.adx.toFixed(1)}`);
 
       // STRONG sinyal varsa işlem aç
       if (analysis.overallSignal === 'STRONG_BUY' || analysis.overallSignal === 'STRONG_SELL') {
+        console.log(`💰 ${symbol} için STRONG sinyal - işlem açılıyor!`);
         await this.executeTrade(symbol, analysis);
         return 'strong';
       }
 
       // Medium sinyal - sadece log
       if (analysis.overallSignal === 'BUY' || analysis.overallSignal === 'SELL') {
+        console.log(`📊 ${symbol} için medium sinyal - izleniyor`);
         this.addActivity('Sinyal Motoru', symbol,
           `${analysis.overallSignal === 'BUY' ? '📈 AL' : '📉 SAT'} SİNYALİ`,
           analysis.overallSignal === 'BUY' ? 'buy' : 'sell',
@@ -164,6 +173,7 @@ export class AutoTradingEngine {
         return 'medium';
       }
 
+      console.log(`⚪ ${symbol} için net sinyal yok`);
       return 'none';
     } catch (error) {
       console.error(`❌ ${symbol} analiz hatası:`, error);
@@ -176,12 +186,15 @@ export class AutoTradingEngine {
     const isStrongBuy = analysis.overallSignal === 'STRONG_BUY';
     const isFutures = analysis.recommendedAction === 'FUTURES_LONG' || analysis.recommendedAction === 'FUTURES_SHORT';
 
-    console.log(`💰 ${symbol} için işlem açılıyor: ${analysis.recommendedAction}`);
+    console.log(`\n💰 ${symbol} için işlem açılıyor...`);
+    console.log(`   Sinyal: ${analysis.overallSignal}`);
+    console.log(`   Öneri: ${analysis.recommendedAction}`);
+    console.log(`   Fiyat: $${analysis.price.toFixed(2)}`);
 
     // Zaten pozisyon var mı?
     const existingPosition = this.openPositions.find(p => p.pair === pair);
     if (existingPosition) {
-      console.log(`⚠️ ${pair} için zaten pozisyon var`);
+      console.log(`⚠️ ${pair} için zaten pozisyon var - atlanıyor`);
       this.addActivity('İşlem Motoru', pair, '⚠️ POZİSYON ZATEN AÇIK', 'info',
         `Mevcut pozisyon var, yeni işlem açılmadı`);
       return;
@@ -189,7 +202,7 @@ export class AutoTradingEngine {
 
     // Maksimum pozisyon limiti (5)
     if (this.openPositions.length >= 5) {
-      console.log(`⚠️ Maksimum pozisyon limitine ulaşıldı (5)`);
+      console.log(`⚠️ Maksimum pozisyon limitine ulaşıldı (5) - atlanıyor`);
       this.addActivity('İşlem Motoru', pair, '⚠️ MAKSİMUM POZİSYON', 'alert',
         `Maksimum 5 açık pozisyon limitine ulaşıldı`);
       return;
@@ -198,6 +211,10 @@ export class AutoTradingEngine {
     const action = isStrongBuy ? '🟢 STRONG BUY' : '🔴 STRONG SELL';
     const direction = isStrongBuy ? 'LONG' : 'SHORT';
     const leverage = isFutures ? analysis.recommendedLeverage : 1;
+
+    console.log(`   Yön: ${direction}`);
+    console.log(`   Kaldıraç: ${leverage}x`);
+    console.log(`   Mod: ${isFutures ? 'Futures' : 'Spot'}`);
 
     this.addActivity('İşlem Motoru', pair, `${action} SİNYALİ - İŞLEM AÇILIYOR`,
       isStrongBuy ? 'buy' : 'sell',
@@ -209,6 +226,9 @@ export class AutoTradingEngine {
       // Pozisyon boyutu (sermayenin %10'u)
       const positionSize = this.currentCapital * 0.1;
       const quantity = positionSize / analysis.price;
+
+      console.log(`   Pozisyon boyutu: $${positionSize.toFixed(2)}`);
+      console.log(`   Miktar: ${quantity.toFixed(6)}`);
 
       // Pozisyon oluştur
       const position: OpenPosition = {
@@ -229,6 +249,9 @@ export class AutoTradingEngine {
         takeProfit: this.calculateTakeProfit(analysis.price, direction, analysis.atr),
         strategy: 'Strong Signal',
       };
+
+      console.log(`   Stop Loss: $${position.stopLoss.toFixed(2)}`);
+      console.log(`   Take Profit: $${position.takeProfit.toFixed(2)}`);
 
       this.openPositions.push(position);
 
@@ -251,7 +274,9 @@ export class AutoTradingEngine {
 
       this.trades.push(trade);
 
-      console.log(`✅ ${pair} pozisyonu açıldı: ${direction} @ $${analysis.price.toFixed(2)}`);
+      console.log(`✅ ${pair} pozisyonu başarıyla açıldı!`);
+      console.log(`   Toplam açık pozisyon: ${this.openPositions.length}`);
+      
       this.addActivity('İşlem Motoru', pair, `✅ ${direction} POZİSYON AÇILDI`,
         isStrongBuy ? 'buy' : 'sell',
         `${quantity.toFixed(6)} @ $${analysis.price.toLocaleString()} | SL: $${position.stopLoss.toFixed(2)} | TP: $${position.takeProfit.toFixed(2)}`,
