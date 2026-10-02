@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useAllTickers } from '../hooks/useBinanceData';
 
 const LivePrices: React.FC = () => {
-  const { tickers, connected } = useAllTickers();
+  const { tickers, connected, connectionStatus, reconnect } = useAllTickers();
   const [sortBy, setSortBy] = useState<'volume' | 'change' | 'name'>('volume');
   const [filter, setFilter] = useState('USDT');
 
@@ -57,9 +57,49 @@ const LivePrices: React.FC = () => {
       {!connected ? (
         <div className="text-center py-8">
           <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Activity className="w-6 h-6 text-gray-500" />
+            {connectionStatus === 'connecting' ? (
+              <RefreshCw className="w-6 h-6 text-yellow-500 animate-spin" />
+            ) : connectionStatus === 'error' ? (
+              <WifiOff className="w-6 h-6 text-red-500" />
+            ) : (
+              <Activity className="w-6 h-6 text-gray-500" />
+            )}
           </div>
-          <p className="text-gray-400 text-sm">WebSocket bağlanıyor...</p>
+          {connectionStatus === 'connecting' && (
+            <>
+              <p className="text-yellow-400 text-sm font-medium mb-1">WebSocket bağlanıyor...</p>
+              <p className="text-gray-500 text-xs mb-3">Binance stream'e bağlanılıyor</p>
+              <button
+                onClick={reconnect}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                Yeniden bağlan
+              </button>
+            </>
+          )}
+          {connectionStatus === 'error' && (
+            <>
+              <p className="text-red-400 text-sm font-medium mb-1">Bağlantı hatası</p>
+              <p className="text-gray-500 text-xs mb-3">WebSocket bağlantısı kurulamadı</p>
+              <button
+                onClick={reconnect}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                Tekrar dene
+              </button>
+            </>
+          )}
+          {connectionStatus === 'disconnected' && (
+            <>
+              <p className="text-gray-400 text-sm mb-3">Bağlantı kesildi</p>
+              <button
+                onClick={reconnect}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                Yeniden bağlan
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto">

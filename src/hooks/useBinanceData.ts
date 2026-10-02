@@ -96,8 +96,14 @@ export function useKlines(symbol: string, interval: string = '1h', limit: number
 export function useWsTicker(symbol: string) {
   const [ticker, setTicker] = useState<WsTicker | null>(null);
   const [connected, setConnected] = useState(false);
+  const streamName = `${symbol.toLowerCase()}@ticker`;
 
   useEffect(() => {
+    binanceAPI.setOnStatusChange(() => {
+      const status = binanceAPI.getWebSocketStatus(streamName) as string;
+      setConnected(status === 'connected');
+    });
+
     const unsubscribe = binanceAPI.subscribeTicker(symbol, (data) => {
       setTicker(data);
       setConnected(true);
@@ -107,7 +113,7 @@ export function useWsTicker(symbol: string) {
       unsubscribe();
       setConnected(false);
     };
-  }, [symbol]);
+  }, [symbol, streamName]);
 
   return { ticker, connected };
 }
@@ -119,8 +125,14 @@ export function useWsKline(symbol: string, interval: string = '1m') {
   const [kline, setKline] = useState<WsKline | null>(null);
   const [klines, setKlines] = useState<WsKline[]>([]);
   const [connected, setConnected] = useState(false);
+  const streamName = `${symbol.toLowerCase()}@kline_${interval}`;
 
   useEffect(() => {
+    binanceAPI.setOnStatusChange(() => {
+      const status = binanceAPI.getWebSocketStatus(streamName) as string;
+      setConnected(status === 'connected');
+    });
+
     const unsubscribe = binanceAPI.subscribeKline(symbol, interval, (data) => {
       setKline(data);
       setKlines(prev => {
@@ -135,7 +147,7 @@ export function useWsKline(symbol: string, interval: string = '1m') {
       unsubscribe();
       setConnected(false);
     };
-  }, [symbol, interval]);
+  }, [symbol, interval, streamName]);
 
   return { kline, klines, connected };
 }
@@ -146,8 +158,14 @@ export function useWsKline(symbol: string, interval: string = '1m') {
 export function useWsTrade(symbol: string) {
   const [trades, setTrades] = useState<WsTrade[]>([]);
   const [connected, setConnected] = useState(false);
+  const streamName = `${symbol.toLowerCase()}@trade`;
 
   useEffect(() => {
+    binanceAPI.setOnStatusChange(() => {
+      const status = binanceAPI.getWebSocketStatus(streamName) as string;
+      setConnected(status === 'connected');
+    });
+
     const unsubscribe = binanceAPI.subscribeTrade(symbol, (data) => {
       setTrades(prev => {
         const newTrades = [data, ...prev];
@@ -161,7 +179,7 @@ export function useWsTrade(symbol: string) {
       unsubscribe();
       setConnected(false);
     };
-  }, [symbol]);
+  }, [symbol, streamName]);
 
   return { trades, connected };
 }
@@ -172,8 +190,14 @@ export function useWsTrade(symbol: string) {
 export function useWsDepth(symbol: string) {
   const [depth, setDepth] = useState<WsDepth | null>(null);
   const [connected, setConnected] = useState(false);
+  const streamName = `${symbol.toLowerCase()}@depth`;
 
   useEffect(() => {
+    binanceAPI.setOnStatusChange(() => {
+      const status = binanceAPI.getWebSocketStatus(streamName) as string;
+      setConnected(status === 'connected');
+    });
+
     const unsubscribe = binanceAPI.subscribeDepth(symbol, (data) => {
       setDepth(data);
       setConnected(true);
@@ -183,7 +207,7 @@ export function useWsDepth(symbol: string) {
       unsubscribe();
       setConnected(false);
     };
-  }, [symbol]);
+  }, [symbol, streamName]);
 
   return { depth, connected };
 }
@@ -194,22 +218,37 @@ export function useWsDepth(symbol: string) {
 export function useAllTickers() {
   const [tickers, setTickers] = useState<WsTicker[]>([]);
   const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
 
   useEffect(() => {
+    // Set up status change listener
+    binanceAPI.setOnStatusChange(() => {
+      const status = binanceAPI.getWebSocketStatus('!ticker@arr') as string;
+      setConnectionStatus(status as any);
+      setConnected(status === 'connected');
+    });
+
     const unsubscribe = binanceAPI.subscribeAllTickers((data) => {
       if (Array.isArray(data)) {
         setTickers(data);
         setConnected(true);
+        setConnectionStatus('connected');
       }
     });
 
     return () => {
       unsubscribe();
       setConnected(false);
+      setConnectionStatus('disconnected');
     };
   }, []);
 
-  return { tickers, connected };
+  const reconnect = () => {
+    setConnectionStatus('connecting');
+    // The auto-reconnect mechanism will handle this
+  };
+
+  return { tickers, connected, connectionStatus, reconnect };
 }
 
 /**

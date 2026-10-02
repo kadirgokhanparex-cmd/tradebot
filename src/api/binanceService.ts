@@ -5,15 +5,34 @@ export class BinanceAPI {
   private futuresUrl: string;
   private wsUrl: string;
   private wsConnections: Map<string, WebSocket> = new Map();
+  private wsStatus: Map<string, 'connecting' | 'connected' | 'disconnected' | 'error'> = new Map();
   private apiKey: string = '';
   private apiSecret: string = '';
   private useTestnet: boolean = true;
+  private onStatusChange: (() => void) | null = null;
 
   constructor() {
     // Default to testnet for safety
     this.baseUrl = BINANCE_CONFIG.rest.testnet;
     this.futuresUrl = BINANCE_CONFIG.futures.testnet;
-    this.wsUrl = BINANCE_CONFIG.ws.stream.testnet[0];
+    this.wsUrl = BINANCE_CONFIG.ws.stream.testnet;
+  }
+
+  /**
+   * Set callback for WebSocket status changes
+   */
+  setOnStatusChange(callback: () => void) {
+    this.onStatusChange = callback;
+  }
+
+  /**
+   * Get WebSocket connection status
+   */
+  getWebSocketStatus(streamName?: string): Map<string, 'connecting' | 'connected' | 'disconnected' | 'error'> | string {
+    if (streamName) {
+      return this.wsStatus.get(streamName) || 'disconnected';
+    }
+    return this.wsStatus;
   }
 
   setCredentials(apiKey: string, apiSecret: string, useTestnet: boolean = true) {
@@ -24,11 +43,11 @@ export class BinanceAPI {
     if (useTestnet) {
       this.baseUrl = BINANCE_CONFIG.rest.testnet;
       this.futuresUrl = BINANCE_CONFIG.futures.testnet;
-      this.wsUrl = BINANCE_CONFIG.ws.stream.testnet[0];
+      this.wsUrl = BINANCE_CONFIG.ws.stream.testnet;
     } else {
       this.baseUrl = BINANCE_CONFIG.rest.main[0];
       this.futuresUrl = BINANCE_CONFIG.futures.main;
-      this.wsUrl = BINANCE_CONFIG.ws.stream.main[0];
+      this.wsUrl = BINANCE_CONFIG.ws.stream.main;
     }
   }
 
@@ -263,44 +282,81 @@ export class BinanceAPI {
   }
 
   /**
-   * Generic stream subscription
+   * Generic stream subscription with auto-reconnect
    */
   private subscribeStream(streamName: string, callback: (data: any) => void): () => void {
     const wsKey = streamName;
-    
-    if (this.wsConnections.has(wsKey)) {
-      console.log(`Already subscribed to ${streamName}`);
-      return () => this.unsubscribeStream(wsKey);
-    }
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isUnsubscribed = false;
 
-    const wsUrl = `${this.wsUrl}/${streamName}`;
-    const ws = new WebSocket(wsUrl);
+    const connect = () => {
+      if (isUnsubscribed) return;
 
-    ws.onopen = () => {
-      console.log(`WebSocket connected: ${streamName}`);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        callback(data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+      // Close existing connection if any
+      const existing = this.wsConnections.get(wsKey);
+      if (existing) {
+        existing.close();
+        this.wsConnections.delete(wsKey);
       }
+
+      // Use correct WebSocket URL format
+      const wsUrl = `${this.wsUrl}/${streamName}`;
+      console.log(`Connecting to WebSocket: ${wsUrl}`);
+      
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log(`✅ WebSocket connected: ${streamName}`);
+        this.wsStatus.set(wsKey, 'connected');
+        if (this.onStatusChange) this.onStatusChange();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          callback(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error(`❌ WebSocket error for ${streamName}:`, error);
+        this.wsStatus.set(wsKey, 'error');
+        if (this.onStatusChange) this.onStatusChange();
+      };
+
+      ws.onclose = (event) => {
+        console.log(`WebSocket closed: ${streamName} (code: ${event.code})`);
+        this.wsConnections.delete(wsKey);
+        this.wsStatus.set(wsKey, 'disconnected');
+        if (this.onStatusChange) this.onStatusChange();
+        
+        // Auto-reconnect after 3 seconds if not manually unsubscribed
+        if (!isUnsubscribed) {
+          console.log(`Attempting to reconnect ${streamName} in 3 seconds...`);
+          reconnectTimeout = setTimeout(() => {
+            connect();
+          }, 3000);
+        }
+      };
+
+      this.wsConnections.set(wsKey, ws);
+      this.wsStatus.set(wsKey, 'connecting');
+      if (this.onStatusChange) this.onStatusChange();
     };
 
-    ws.onerror = (error) => {
-      console.error(`WebSocket error for ${streamName}:`, error);
+    // Initial connection
+    connect();
+
+    // Return unsubscribe function
+    return () => {
+      isUnsubscribed = true;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      this.unsubscribeStream(wsKey);
     };
-
-    ws.onclose = () => {
-      console.log(`WebSocket closed: ${streamName}`);
-      this.wsConnections.delete(wsKey);
-    };
-
-    this.wsConnections.set(wsKey, ws);
-
-    return () => this.unsubscribeStream(wsKey);
   }
 
   /**

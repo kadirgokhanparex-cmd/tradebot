@@ -22,22 +22,17 @@ export const BINANCE_CONFIG = {
   // WebSocket Endpoints
   ws: {
     stream: {
-      main: [
-        'wss://stream.binance.com:9443/ws',
-        'wss://stream.binance.com:9443/stream',
-      ],
-      testnet: [
-        'wss://stream.testnet.binance.vision:9443/ws',
-        'wss://stream.testnet.binance.vision:9443/stream',
-      ],
+      main: 'wss://stream.binance.com:9443/ws',
+      testnet: 'wss://testnet.binance.vision/ws',
+      // Combined stream endpoint
+      combined: {
+        main: 'wss://stream.binance.com:9443/stream',
+        testnet: 'wss://testnet.binance.vision/stream',
+      }
     },
     wsApi: {
-      main: [
-        'wss://ws-api.binance.com:9443/ws-api/v3',
-      ],
-      testnet: [
-        'wss://ws-api.testnet.binance.vision:9443/ws-api/v3',
-      ],
+      main: 'wss://ws-api.binance.com:9443/ws-api/v3',
+      testnet: 'wss://ws-api.testnet.binance.vision/ws-api/v3',
     },
   },
 
