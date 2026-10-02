@@ -13,6 +13,12 @@ export const BINANCE_CONFIG = {
     testnet: 'https://testnet.binance.vision/api',
   },
 
+  // Futures API Endpoints (USDⓈ-M)
+  futures: {
+    main: 'https://fapi.binance.com/fapi',
+    testnet: 'https://testnet.binancefuture.com/fapi',
+  },
+
   // WebSocket Endpoints
   ws: {
     stream: {
@@ -243,4 +249,99 @@ export interface WsDepth {
   u: number;    // Final update ID in event
   b: [string, string][];  // Bids
   a: [string, string][];  // Asks
+}
+
+// Futures Types
+export interface FuturesAccountInfo {
+  feeTier: number;
+  canTrade: boolean;
+  canDeposit: boolean;
+  canWithdraw: boolean;
+  updateTime: number;
+  multiAssetsMargin: boolean;
+  totalInitialMargin: string;
+  totalMaintMargin: string;
+  totalWalletBalance: string;
+  totalUnrealizedProfit: string;
+  totalMarginBalance: string;
+  totalPositionInitialMargin: string;
+  totalOpenOrderInitialMargin: string;
+  totalCrossWalletBalance: string;
+  totalCrossUnPnl: string;
+  availableBalance: string;
+  maxWithdrawAmount: string;
+  assets: FuturesAsset[];
+  positions: FuturesPosition[];
+}
+
+export interface FuturesAsset {
+  asset: string;
+  walletBalance: string;
+  unrealizedProfit: string;
+  marginBalance: string;
+  maintMargin: string;
+  initialMargin: string;
+  positionInitialMargin: string;
+  openOrderInitialMargin: string;
+  crossWalletBalance: string;
+  crossUnPnl: string;
+  availableBalance: string;
+  maxWithdrawAmount: string;
+  marginAvailable: boolean;
+  updateTime: number;
+}
+
+export interface FuturesPosition {
+  symbol: string;
+  initialMargin: string;
+  maintMargin: string;
+  unrealizedProfit: string;
+  positionInitialMargin: string;
+  openOrderInitialMargin: string;
+  leverage: string;
+  isolated: boolean;
+  entryPrice: string;
+  maxNotional: string;
+  bidNotional: string;
+  askNotional: string;
+  positionSide: string;
+  positionAmt: string;
+  updateTime: number;
+}
+
+export interface FuturesOrder {
+  clientOrderId: string;
+  cumQty: string;
+  cumQuote: string;
+  executedQty: string;
+  orderId: number;
+  avgPrice: string;
+  origQty: string;
+  price: string;
+  reduceOnly: boolean;
+  side: string;
+  positionSide: string;
+  status: string;
+  stopPrice: string;
+  closePosition: boolean;
+  symbol: string;
+  timeInForce: string;
+  type: string;
+  origType: string;
+  activatePrice: string;
+  priceRate: string;
+  updateTime: number;
+  workingType: string;
+}
+
+export interface FuturesBalance {
+  accountAlias: string;
+  asset: string;
+  balance: string;
+  crossWalletBalance: string;
+  crossUnPnl: string;
+  availableBalance: string;
+  maxWithdrawAmount: string;
+  marginAvailable: boolean;
+  updateTime: number;
 }

@@ -1,7 +1,8 @@
-import { BINANCE_CONFIG, BinanceTicker, BinanceKline, BinanceOrderBook, BinanceExchangeInfo, BinanceAccountInfo, BinanceOrder, WsTicker, WsKline, WsTrade, WsDepth } from './binance';
+import { BINANCE_CONFIG, BinanceTicker, BinanceKline, BinanceOrderBook, BinanceExchangeInfo, BinanceAccountInfo, BinanceOrder, WsTicker, WsKline, WsTrade, WsDepth, FuturesAccountInfo, FuturesOrder, FuturesBalance, FuturesPosition } from './binance';
 
 export class BinanceAPI {
   private baseUrl: string;
+  private futuresUrl: string;
   private wsUrl: string;
   private wsConnections: Map<string, WebSocket> = new Map();
   private apiKey: string = '';
@@ -11,6 +12,7 @@ export class BinanceAPI {
   constructor() {
     // Default to testnet for safety
     this.baseUrl = BINANCE_CONFIG.rest.testnet;
+    this.futuresUrl = BINANCE_CONFIG.futures.testnet;
     this.wsUrl = BINANCE_CONFIG.ws.stream.testnet[0];
   }
 
@@ -21,9 +23,11 @@ export class BinanceAPI {
     
     if (useTestnet) {
       this.baseUrl = BINANCE_CONFIG.rest.testnet;
+      this.futuresUrl = BINANCE_CONFIG.futures.testnet;
       this.wsUrl = BINANCE_CONFIG.ws.stream.testnet[0];
     } else {
       this.baseUrl = BINANCE_CONFIG.rest.main[0];
+      this.futuresUrl = BINANCE_CONFIG.futures.main;
       this.wsUrl = BINANCE_CONFIG.ws.stream.main[0];
     }
   }
@@ -369,6 +373,271 @@ export class BinanceAPI {
     } catch (error) {
       console.error('Ping failed:', error);
       return false;
+    }
+  }
+
+  // ==================== FUTURES API METHODS ====================
+
+  /**
+   * Get Futures account information (requires signature)
+   */
+  async getFuturesAccountInfo(): Promise<FuturesAccountInfo> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      const timestamp = Date.now();
+      const queryString = `timestamp=${timestamp}`;
+      const signature = await this.createSignature(queryString);
+      
+      const response = await fetch(`${this.futuresUrl}/v2/account?${queryString}&signature=${signature}`, {
+        headers: {
+          'X-MBX-APIKEY': this.apiKey,
+        },
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching futures account info:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Futures account balance (requires signature)
+   */
+  async getFuturesBalance(): Promise<FuturesBalance[]> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      const timestamp = Date.now();
+      const queryString = `timestamp=${timestamp}`;
+      const signature = await this.createSignature(queryString);
+      
+      const response = await fetch(`${this.futuresUrl}/v2/balance?${queryString}&signature=${signature}`, {
+        headers: {
+          'X-MBX-APIKEY': this.apiKey,
+        },
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching futures balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Place a new Futures order (requires signature)
+   */
+  async placeFuturesOrder(params: {
+    symbol: string;
+    side: 'BUY' | 'SELL';
+    positionSide?: 'BOTH' | 'LONG' | 'SHORT';
+    type: string;
+    quantity?: string;
+    price?: string;
+    timeInForce?: string;
+    reduceOnly?: boolean;
+    stopPrice?: string;
+    leverage?: number;
+  }): Promise<FuturesOrder> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      // Set leverage if provided
+      if (params.leverage) {
+        await this.setFuturesLeverage(params.symbol, params.leverage);
+      }
+
+      const timestamp = Date.now();
+      const queryParams = new URLSearchParams({
+        symbol: params.symbol,
+        side: params.side,
+        type: params.type,
+        timestamp: timestamp.toString(),
+      });
+
+      if (params.positionSide) queryParams.append('positionSide', params.positionSide);
+      if (params.quantity) queryParams.append('quantity', params.quantity);
+      if (params.price) queryParams.append('price', params.price);
+      if (params.timeInForce) queryParams.append('timeInForce', params.timeInForce);
+      if (params.reduceOnly) queryParams.append('reduceOnly', 'true');
+      if (params.stopPrice) queryParams.append('stopPrice', params.stopPrice);
+      
+      const signature = await this.createSignature(queryParams.toString());
+      
+      const response = await fetch(`${this.futuresUrl}/v1/order?${queryParams.toString()}&signature=${signature}`, {
+        method: 'POST',
+        headers: {
+          'X-MBX-APIKEY': this.apiKey,
+        },
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error placing futures order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Set leverage for a symbol (requires signature)
+   */
+  async setFuturesLeverage(symbol: string, leverage: number): Promise<any> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      const timestamp = Date.now();
+      const queryString = `symbol=${symbol}&leverage=${leverage}&timestamp=${timestamp}`;
+      const signature = await this.createSignature(queryString);
+      
+      const response = await fetch(`${this.futuresUrl}/v1/leverage?${queryString}&signature=${signature}`, {
+        method: 'POST',
+        headers: {
+          'X-MBX-APIKEY': this.apiKey,
+        },
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error setting leverage:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get position information (requires signature)
+   */
+  async getFuturesPositions(symbol?: string): Promise<FuturesPosition[]> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      const timestamp = Date.now();
+      let queryString = `timestamp=${timestamp}`;
+      if (symbol) queryString += `&symbol=${symbol}`;
+      
+      const signature = await this.createSignature(queryString);
+      
+      const response = await fetch(`${this.futuresUrl}/v2/positionRisk?${queryString}&signature=${signature}`, {
+        headers: {
+          'X-MBX-APIKEY': this.apiKey,
+        },
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching futures positions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get open Futures orders (requires signature)
+   */
+  async getFuturesOpenOrders(symbol?: string): Promise<FuturesOrder[]> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      const timestamp = Date.now();
+      let queryString = `timestamp=${timestamp}`;
+      if (symbol) queryString += `&symbol=${symbol}`;
+      
+      const signature = await this.createSignature(queryString);
+      
+      const response = await fetch(`${this.futuresUrl}/v1/openOrders?${queryString}&signature=${signature}`, {
+        headers: {
+          'X-MBX-APIKEY': this.apiKey,
+        },
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching futures open orders:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Close a Futures position (requires signature)
+   */
+  async closeFuturesPosition(symbol: string, positionSide: 'LONG' | 'SHORT' | 'BOTH' = 'BOTH'): Promise<FuturesOrder> {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('API credentials not set');
+    }
+
+    try {
+      // Get current position to determine quantity
+      const positions = await this.getFuturesPositions(symbol);
+      const position = positions.find(p => p.symbol === symbol && (positionSide === 'BOTH' || p.positionSide === positionSide));
+      
+      if (!position || parseFloat(position.positionAmt) === 0) {
+        throw new Error('No position to close');
+      }
+
+      const closeSide = parseFloat(position.positionAmt) > 0 ? 'SELL' : 'BUY';
+      const quantity = Math.abs(parseFloat(position.positionAmt)).toString();
+
+      return await this.placeFuturesOrder({
+        symbol,
+        side: closeSide as 'BUY' | 'SELL',
+        positionSide: positionSide as 'BOTH' | 'LONG' | 'SHORT',
+        type: 'MARKET',
+        quantity,
+        reduceOnly: true,
+      });
+    } catch (error) {
+      console.error('Error closing futures position:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Futures exchange info
+   */
+  async getFuturesExchangeInfo(): Promise<any> {
+    try {
+      const response = await fetch(`${this.futuresUrl}/v1/exchangeInfo`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching futures exchange info:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Futures mark price
+   */
+  async getFuturesMarkPrice(symbol?: string): Promise<any> {
+    try {
+      const url = symbol 
+        ? `${this.futuresUrl}/v1/premiumIndex?symbol=${symbol}`
+        : `${this.futuresUrl}/v1/premiumIndex`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching futures mark price:', error);
+      throw error;
     }
   }
 }
