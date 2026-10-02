@@ -3,76 +3,28 @@ import { Bot, Trade, Strategy, MarketData, Indicator, LiveActivity, OpenPosition
 export const mockBots: Bot[] = [
   {
     id: '1', name: 'BTC Grid Bot', pair: 'BTC/USDT', strategy: 'Grid Trading',
-    status: 'running', profit: 2450.32, profitPercent: 12.25, trades: 156, winRate: 78.5,
-    investment: 20000, currentValue: 22450.32, createdAt: '2024-01-15',
-    leverage: 1, isSpot: true, currentAction: 'BTC 67,250$ seviyesinde GRID BUY emri bekleniyor',
-    nextAction: 'RSI 35 altına düşerse alım yapılacak', currentIndicator: 'RSI(14): 42 | BB Alt: 66,800$'
+    status: 'stopped', profit: 0, profitPercent: 0, trades: 0, winRate: 0,
+    investment: 0, currentValue: 0, createdAt: new Date().toISOString().split('T')[0],
+    leverage: 1, isSpot: true, currentAction: 'Bot başlatılmadı',
+    nextAction: 'Bot başlatıldığında aktif olacak', currentIndicator: 'Hazır'
   },
   {
     id: '2', name: 'ETH DCA Bot', pair: 'ETH/USDT', strategy: 'DCA',
-    status: 'running', profit: 890.15, profitPercent: 8.9, trades: 89, winRate: 82.1,
-    investment: 10000, currentValue: 10890.15, createdAt: '2024-02-01',
-    leverage: 1, isSpot: true, currentAction: 'ETH için 4 saatlik DCA alım döngüsü başladı',
-    nextAction: '02:00 UTC\'de 0.5 ETH alınacak', currentIndicator: 'EMA(50): 3,380$ | MACD: Pozitif'
+    status: 'stopped', profit: 0, profitPercent: 0, trades: 0, winRate: 0,
+    investment: 0, currentValue: 0, createdAt: new Date().toISOString().split('T')[0],
+    leverage: 1, isSpot: true, currentAction: 'Bot başlatılmadı',
+    nextAction: 'Bot başlatıldığında aktif olacak', currentIndicator: 'Hazır'
   },
   {
     id: '3', name: 'SOL Scalper', pair: 'SOL/USDT', strategy: 'Scalping',
-    status: 'running', profit: 1560.78, profitPercent: 15.6, trades: 342, winRate: 71.2,
-    investment: 10000, currentValue: 11560.78, createdAt: '2024-02-10',
-    leverage: 5, isSpot: false, currentAction: 'SOL 145.80$ - 5x LONG pozisyon açık, TP: 148.50$',
-    nextAction: '148.50$ ulaşınca otomatik satış', currentIndicator: 'Stoch: 72/65 | Vol: Yüksek'
-  },
-  {
-    id: '4', name: 'BNB Momentum', pair: 'BNB/USDT', strategy: 'Momentum',
-    status: 'stopped', profit: 430.50, profitPercent: 4.3, trades: 45, winRate: 66.7,
-    investment: 10000, currentValue: 10430.50, createdAt: '2024-02-10',
-    leverage: 3, isSpot: false, currentAction: 'Bot durduruldu - ADX zayıf trend gösteriyor',
-    nextAction: 'ADX > 25 olunca tekrar başlatılacak', currentIndicator: 'ADX: 18 | Trend: Zayıf'
-  },
-  {
-    id: '5', name: 'XRP Arbitrage', pair: 'XRP/USDT', strategy: 'Arbitrage',
-    status: 'error', profit: -120.45, profitPercent: -2.4, trades: 23, winRate: 43.5,
-    investment: 5000, currentValue: 4879.55, createdAt: '2024-03-01',
-    leverage: 1, isSpot: true, currentAction: 'HATA: Spread yetersiz, arbitraj fırsatı yok',
-    nextAction: 'Spread > 0.3% olunca tekrar denenecek', currentIndicator: 'Spread: 0.08% | Min: 0.3%'
-  },
-  {
-    id: '6', name: 'ADA Mean Reversion', pair: 'ADA/USDT', strategy: 'Mean Reversion',
-    status: 'running', profit: 670.22, profitPercent: 6.7, trades: 98, winRate: 74.5,
-    investment: 10000, currentValue: 10670.22, createdAt: '2024-02-15',
-    leverage: 1, isSpot: true, currentAction: 'ADA 0.62$ - Z-Score: -1.8, ortalamaya dönüş bekleniyor',
-    nextAction: 'Z-Score 0\'a yaklaşırsa satış yapılacak', currentIndicator: 'Z-Score: -1.8 | BB%: 12%'
-  },
-  {
-    id: '7', name: 'DOGE Breakout', pair: 'DOGE/USDT', strategy: 'Breakout',
-    status: 'running', profit: 320.10, profitPercent: 6.4, trades: 67, winRate: 69.8,
-    investment: 5000, currentValue: 5320.10, createdAt: '2024-03-05',
-    leverage: 3, isSpot: false, currentAction: 'DOGE direnç analizi yapılıyor - 0.165$ kritik seviye',
-    nextAction: '0.165$ kırılırsa 3x LONG açılacak', currentIndicator: 'Vol Profile: 0.162$ | RSI: 58'
-  },
-  {
-    id: '8', name: 'AVAX Swing', pair: 'AVAX/USDT', strategy: 'Swing Trading',
-    status: 'running', profit: 1120.45, profitPercent: 11.2, trades: 34, winRate: 76.5,
-    investment: 10000, currentValue: 11120.45, createdAt: '2024-03-08',
-    leverage: 1, isSpot: true, currentAction: 'AVAX 38.50$ - Fibonacci 0.618 desteğinde alım bölgesi',
-    nextAction: '37.80$ stop loss, 42.00$ take profit', currentIndicator: 'Fib: 0.618 @ 38.20$ | MACD: Cross'
+    status: 'stopped', profit: 0, profitPercent: 0, trades: 0, winRate: 0,
+    investment: 0, currentValue: 0, createdAt: new Date().toISOString().split('T')[0],
+    leverage: 5, isSpot: false, currentAction: 'Bot başlatılmadı',
+    nextAction: 'Bot başlatıldığında aktif olacak', currentIndicator: 'Hazır'
   },
 ];
 
-export const mockTrades: Trade[] = [
-  { id: '1', botId: '1', botName: 'BTC Grid Bot', pair: 'BTC/USDT', type: 'SELL', price: 67250.00, amount: 0.015, total: 1008.75, profit: 45.32, timestamp: '2024-03-15 14:32:15', status: 'completed', leverage: 1, isSpot: true },
-  { id: '2', botId: '1', botName: 'BTC Grid Bot', pair: 'BTC/USDT', type: 'BUY', price: 66800.00, amount: 0.015, total: 1002.00, profit: 0, timestamp: '2024-03-15 12:15:42', status: 'completed', leverage: 1, isSpot: true },
-  { id: '3', botId: '2', botName: 'ETH DCA Bot', pair: 'ETH/USDT', type: 'BUY', price: 3420.50, amount: 0.5, total: 1710.25, profit: 0, timestamp: '2024-03-15 10:00:00', status: 'completed', leverage: 1, isSpot: true },
-  { id: '4', botId: '3', botName: 'SOL Scalper', pair: 'SOL/USDT', type: 'SELL', price: 145.80, amount: 10, total: 1458.00, profit: 23.45, timestamp: '2024-03-15 09:45:30', status: 'completed', leverage: 5, isSpot: false },
-  { id: '5', botId: '3', botName: 'SOL Scalper', pair: 'SOL/USDT', type: 'BUY', price: 143.45, amount: 10, total: 1434.55, profit: 0, timestamp: '2024-03-15 09:30:12', status: 'completed', leverage: 5, isSpot: false },
-  { id: '6', botId: '1', botName: 'BTC Grid Bot', pair: 'BTC/USDT', type: 'SELL', price: 67100.00, amount: 0.02, total: 1342.00, profit: 62.10, timestamp: '2024-03-14 22:15:00', status: 'completed', leverage: 1, isSpot: true },
-  { id: '7', botId: '6', botName: 'ADA Mean Reversion', pair: 'ADA/USDT', type: 'BUY', price: 0.62, amount: 5000, total: 3100.00, profit: 0, timestamp: '2024-03-14 18:30:00', status: 'completed', leverage: 1, isSpot: true },
-  { id: '8', botId: '2', botName: 'ETH DCA Bot', pair: 'ETH/USDT', type: 'SELL', price: 3450.00, amount: 0.3, total: 1035.00, profit: 15.75, timestamp: '2024-03-14 16:00:00', status: 'completed', leverage: 1, isSpot: true },
-  { id: '9', botId: '5', botName: 'XRP Arbitrage', pair: 'XRP/USDT', type: 'BUY', price: 0.58, amount: 2000, total: 1160.00, profit: -12.30, timestamp: '2024-03-14 14:20:00', status: 'completed', leverage: 1, isSpot: true },
-  { id: '10', botId: '3', botName: 'SOL Scalper', pair: 'SOL/USDT', type: 'SELL', price: 146.20, amount: 8, total: 1169.60, profit: 18.90, timestamp: '2024-03-14 11:45:00', status: 'completed', leverage: 5, isSpot: false },
-  { id: '11', botId: '7', botName: 'DOGE Breakout', pair: 'DOGE/USDT', type: 'BUY', price: 0.158, amount: 10000, total: 1580.00, profit: 0, timestamp: '2024-03-14 08:00:00', status: 'completed', leverage: 3, isSpot: false },
-  { id: '12', botId: '8', botName: 'AVAX Swing', pair: 'AVAX/USDT', type: 'BUY', price: 37.20, amount: 50, total: 1860.00, profit: 0, timestamp: '2024-03-13 20:15:00', status: 'completed', leverage: 1, isSpot: true },
-];
+export const mockTrades: Trade[] = [];
 
 export const mockStrategies: Strategy[] = [
   { id: '1', name: 'Grid Trading', description: 'Belirli bir fiyat aralığında otomatik alım-satım emirleri yerleştirir. Yatay piyasalarda yüksek kar sağlar.', risk: 'medium', avgReturn: 15.5, maxDrawdown: 8.2, winRate: 78, tradesPerDay: 12, indicators: ['Bollinger Bands', 'RSI', 'Volume'] },
@@ -228,25 +180,10 @@ export const mockIndicators: Indicator[] = [
 ];
 
 export const mockLiveActivities: LiveActivity[] = [
-  { id: '1', timestamp: '14:32:18', botName: 'BTC Grid Bot', pair: 'BTC/USDT', action: 'SATIŞ EMRİ GÖNDERİLDİ', type: 'sell', details: '0.015 BTC @ $67,250 - Grid üst seviye tetiklendi', price: 67250 },
-  { id: '2', timestamp: '14:32:15', botName: 'SOL Scalper', pair: 'SOL/USDT', action: 'ANALİZ TAMAMLANDI', type: 'analysis', details: '5x LONG pozisyon kar realizasyonu - RSI: 74 (aşırı alım)', price: 145.80 },
-  { id: '3', timestamp: '14:31:45', botName: 'ETH DCA Bot', pair: 'ETH/USDT', action: 'SİNYAL BEKLENİYOR', type: 'signal', details: 'MACD pozitif kesişim yakınında - 4H timeframe', price: 3420.50 },
-  { id: '4', timestamp: '14:31:20', botName: 'DOGE Breakout', pair: 'DOGE/USDT', action: 'DİRENÇ ANALİZİ', type: 'analysis', details: '0.165$ direnci test ediliyor - Hacim artışı tespit edildi', price: 0.162 },
-  { id: '5', timestamp: '14:30:55', botName: 'ADA Mean Reversion', pair: 'ADA/USDT', action: 'POZİSYON AÇIK', type: 'info', details: 'Z-Score: -1.8 → Ortalamaya dönüş bekleniyor - Hedef: 0.65$', price: 0.62 },
-  { id: '6', timestamp: '14:30:30', botName: 'AVAX Swing', pair: 'AVAX/USDT', action: 'FIBONACCI SEVİYESİ', type: 'signal', details: '0.618 desteğinde - MACD bullish cross bekleniyor', price: 38.50 },
-  { id: '7', timestamp: '14:30:10', botName: 'NEAR Scalper', pair: 'NEAR/USDT', action: 'ALIM EMRİ GÖNDERİLDİ', type: 'buy', details: '5x LONG - 100 NEAR @ $5.80 - RSI dip alımı', price: 5.80 },
-  { id: '8', timestamp: '14:29:45', botName: 'LINK Momentum', pair: 'LINK/USDT', action: 'UYARI: STRONG BUY', type: 'alert', details: 'Tüm indikatörler AL sinyali veriyor - ADX: 32, RSI: 62, MACD: Pozitif', price: 14.80 },
-  { id: '9', timestamp: '14:29:20', botName: 'BTC Grid Bot', pair: 'BTC/USDT', action: 'GRID AYARI GÜNCELLENDİ', type: 'info', details: 'Yeni grid aralığı: $66,500 - $68,000 - 10 seviye', price: 67250 },
-  { id: '10', timestamp: '14:28:50', botName: 'SOL Scalper', pair: 'SOL/USDT', action: '5x LONG AÇILDI', type: 'buy', details: '10 SOL @ $143.45 - SL: $141.50 - TP: $148.50', price: 143.45 },
+  { id: '1', timestamp: new Date().toLocaleTimeString('tr-TR'), botName: 'Sistem', pair: 'TÜM', action: 'SİSTEM BAŞLATILDI', type: 'info', details: 'Binance Auto Trading Bot başlatıldı. Testnet modu aktif.', price: 0 },
 ];
 
-export const mockOpenPositions: OpenPosition[] = [
-  { id: '1', botId: '3', botName: 'SOL Scalper', pair: 'SOL/USDT', type: 'LONG', entryPrice: 143.45, currentPrice: 145.80, amount: 10, leverage: 5, isSpot: false, pnl: 117.50, pnlPercent: 8.19, openedAt: '2024-03-15 09:30', stopLoss: 141.50, takeProfit: 148.50, strategy: 'Scalping' },
-  { id: '2', botId: '6', botName: 'ADA Mean Reversion', pair: 'ADA/USDT', type: 'LONG', entryPrice: 0.62, currentPrice: 0.62, amount: 5000, leverage: 1, isSpot: true, pnl: 0, pnlPercent: 0, openedAt: '2024-03-14 18:30', stopLoss: 0.59, takeProfit: 0.65, strategy: 'Mean Reversion' },
-  { id: '3', botId: '8', botName: 'AVAX Swing', pair: 'AVAX/USDT', type: 'LONG', entryPrice: 37.20, currentPrice: 38.50, amount: 50, leverage: 1, isSpot: true, pnl: 65.00, pnlPercent: 3.49, openedAt: '2024-03-13 20:15', stopLoss: 35.80, takeProfit: 42.00, strategy: 'Swing Trading' },
-  { id: '4', botId: '7', botName: 'DOGE Breakout', pair: 'DOGE/USDT', type: 'LONG', entryPrice: 0.158, currentPrice: 0.162, amount: 10000, leverage: 3, isSpot: false, pnl: 120.00, pnlPercent: 7.59, openedAt: '2024-03-14 08:00', stopLoss: 0.152, takeProfit: 0.175, strategy: 'Breakout' },
-  { id: '5', botId: '1', botName: 'BTC Grid Bot', pair: 'BTC/USDT', type: 'LONG', entryPrice: 66800, currentPrice: 67250, amount: 0.015, leverage: 1, isSpot: true, pnl: 6.75, pnlPercent: 0.67, openedAt: '2024-03-15 12:15', stopLoss: 66200, takeProfit: 67800, strategy: 'Grid Trading' },
-];
+export const mockOpenPositions: OpenPosition[] = [];
 
 export const generatePriceHistory = (basePrice: number, points: number = 48): { time: string; price: number; volume: number }[] => {
   const data = [];
@@ -268,16 +205,14 @@ export const generatePriceHistory = (basePrice: number, points: number = 48): { 
 
 export const generatePortfolioHistory = (): { date: string; value: number; profit: number }[] => {
   const data = [];
-  let value = 55000;
+  const initialValue = 10000; // Başlangıç sermayesi: 10,000 USDT
   const now = new Date();
-  for (let i = 30; i >= 0; i--) {
+  for (let i = 7; i >= 0; i--) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60000);
-    const change = (Math.random() - 0.4) * 1500;
-    value = Math.max(value + change, 50000);
     data.push({
       date: `${date.getDate()}/${date.getMonth() + 1}`,
-      value: Math.round(value * 100) / 100,
-      profit: Math.round((value - 55000) * 100) / 100,
+      value: initialValue,
+      profit: 0,
     });
   }
   return data;
