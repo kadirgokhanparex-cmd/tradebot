@@ -23,6 +23,7 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'scanner', label: 'Piyasa Tarama', icon: Activity },
   { id: 'live', label: 'Canlı Aktivite', icon: Activity },
   { id: 'bots', label: 'Trading Botları', icon: Bot },
   { id: 'market', label: 'Piyasa Analizi', icon: BarChart3 },

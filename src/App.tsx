@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import LiveActivityPanel from './components/LiveActivity';
+import MarketScannerPanel from './components/MarketScannerPanel';
 import Bots from './components/Bots';
 import MarketAnalyzer from './components/MarketAnalyzer';
 import IndicatorPanel from './components/IndicatorPanel';
@@ -17,6 +18,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
+      case 'scanner':
+        return <MarketScannerPanel />;
       case 'live':
         return <LiveActivityPanel />;
       case 'bots':
