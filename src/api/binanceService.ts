@@ -429,12 +429,18 @@ export class BinanceAPI {
   }
 
   /**
-   * Generic stream subscription with auto-reconnect
+   * Generic stream subscription with auto-reconnect and connection health check
    */
   private subscribeStream(streamName: string, callback: (data: any) => void): () => void {
     const wsKey = streamName;
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let healthCheckInterval: ReturnType<typeof setInterval> | null = null;
     let isUnsubscribed = false;
+    let reconnectAttempts = 0;
+    let lastMessageTime = Date.now();
+    const maxReconnectAttempts = 10;
+    const healthCheckIntervalMs = 30000; // 30 saniye
+    const maxSilenceTime = 60000; // 60 saniye mesaj gelmezse reconnect
 
     const connect = () => {
       if (isUnsubscribed) return;
@@ -446,45 +452,92 @@ export class BinanceAPI {
         this.wsConnections.delete(wsKey);
       }
 
+      // Clear existing health check
+      if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+        healthCheckInterval = null;
+      }
+
       // Use correct WebSocket URL format
       const wsUrl = `${this.wsUrl}/${streamName}`;
-      console.log(`Connecting to WebSocket: ${wsUrl}`);
+      console.log(`🔌 WebSocket bağlanıyor: ${wsUrl} (Deneme ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
       
       const ws = new WebSocket(wsUrl);
 
+      // Connection timeout - 10 saniye
+      const connectionTimeout = setTimeout(() => {
+        if (ws.readyState === WebSocket.CONNECTING) {
+          console.warn(`⏱️ WebSocket connection timeout: ${streamName}`);
+          ws.close();
+        }
+      }, 10000);
+
       ws.onopen = () => {
-        console.log(`✅ WebSocket connected: ${streamName}`);
+        clearTimeout(connectionTimeout);
+        console.log(`✅ WebSocket bağlandı: ${streamName}`);
         this.wsStatus.set(wsKey, 'connected');
+        reconnectAttempts = 0; // Reset reconnect counter
+        lastMessageTime = Date.now();
+        
         if (this.onStatusChange) this.onStatusChange();
+
+        // Start health check - her 30 saniyede bağlantıyı kontrol et
+        healthCheckInterval = setInterval(() => {
+          const silenceTime = Date.now() - lastMessageTime;
+          
+          if (silenceTime > maxSilenceTime) {
+            console.warn(`⚠️ WebSocket sessizlik süresi aşıldı: ${streamName} (${silenceTime/1000} saniye)`);
+            console.log(`🔄 Yeniden bağlanılıyor: ${streamName}`);
+            ws.close();
+          } else {
+            console.log(`💓 WebSocket sağlıklı: ${streamName} (Son mesaj: ${silenceTime/1000} saniye önce)`);
+          }
+        }, healthCheckIntervalMs);
       };
 
       ws.onmessage = (event) => {
+        lastMessageTime = Date.now(); // Update last message time
+        
         try {
           const data = JSON.parse(event.data);
           callback(data);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('❌ WebSocket mesaj parse hatası:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error(`❌ WebSocket error for ${streamName}:`, error);
+        clearTimeout(connectionTimeout);
+        console.error(`❌ WebSocket hatası ${streamName}:`, error);
         this.wsStatus.set(wsKey, 'error');
         if (this.onStatusChange) this.onStatusChange();
       };
 
       ws.onclose = (event) => {
-        console.log(`WebSocket closed: ${streamName} (code: ${event.code})`);
+        clearTimeout(connectionTimeout);
+        
+        // Clear health check
+        if (healthCheckInterval) {
+          clearInterval(healthCheckInterval);
+          healthCheckInterval = null;
+        }
+
+        console.log(`🔌 WebSocket kapandı: ${streamName} (code: ${event.code}, reason: ${event.reason || 'N/A'})`);
         this.wsConnections.delete(wsKey);
         this.wsStatus.set(wsKey, 'disconnected');
         if (this.onStatusChange) this.onStatusChange();
         
-        // Auto-reconnect after 3 seconds if not manually unsubscribed
-        if (!isUnsubscribed) {
-          console.log(`Attempting to reconnect ${streamName} in 3 seconds...`);
+        // Auto-reconnect with exponential backoff
+        if (!isUnsubscribed && reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000); // Max 30 saniye
+          console.log(`🔄 Yeniden bağlanılıyor: ${streamName} (${delay/1000} saniye sonra, deneme ${reconnectAttempts}/${maxReconnectAttempts})`);
+          
           reconnectTimeout = setTimeout(() => {
             connect();
-          }, 3000);
+          }, delay);
+        } else if (reconnectAttempts >= maxReconnectAttempts) {
+          console.error(`❌ Maksimum yeniden bağlanma denemesi aşıldı: ${streamName}`);
         }
       };
 
@@ -501,6 +554,9 @@ export class BinanceAPI {
       isUnsubscribed = true;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
+      }
+      if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
       }
       this.unsubscribeStream(wsKey);
     };
