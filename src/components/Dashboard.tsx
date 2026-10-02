@@ -1,19 +1,19 @@
 import React, { useMemo } from 'react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Bot, Target, ArrowUpRight, ArrowDownRight, Zap, Shield } from 'lucide-react';
-import { mockBots, mockMarketData, mockOpenPositions, mockLiveActivities, generatePortfolioHistory, generatePriceHistory } from '../data';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, DollarSign, Activity, Bot, Target, ArrowUpRight, Zap, Shield } from 'lucide-react';
+import { mockBots, mockMarketData, mockOpenPositions, mockLiveActivities, generatePortfolioHistory } from '../data';
+import ConnectionStatus from './ConnectionStatus';
+import LivePrices from './LivePrices';
+import LiveChart from './LiveChart';
 
 const Dashboard: React.FC = () => {
-  // Memoize data to prevent re-creation on every render
   const portfolioHistory = useMemo(() => generatePortfolioHistory(), []);
-  const btcPriceHistory = useMemo(() => generatePriceHistory(67250), []);
   
   const totalValue = useMemo(() => mockBots.reduce((sum, bot) => sum + bot.currentValue, 0), []);
   const totalProfit = useMemo(() => mockBots.reduce((sum, bot) => sum + bot.profit, 0), []);
   const totalInvestment = useMemo(() => mockBots.reduce((sum, bot) => sum + bot.investment, 0), []);
   const totalProfitPercent = useMemo(() => (totalProfit / totalInvestment) * 100, [totalProfit, totalInvestment]);
   const activeBots = useMemo(() => mockBots.filter(b => b.status === 'running').length, []);
-  const todayProfit = 485.32;
   const totalPnl = useMemo(() => mockOpenPositions.reduce((sum, p) => sum + p.pnl, 0), []);
 
   return (
@@ -25,13 +25,10 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-400 text-sm mt-1">Binance Testnet - Otomatik Trading Kontrol Paneli</p>
         </div>
         <div className="flex items-center gap-3">
+          <ConnectionStatus />
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-1.5 flex items-center gap-2">
             <Shield className="w-4 h-4 text-blue-400" />
-            <span className="text-blue-400 text-xs font-medium">Testnet Modu</span>
-          </div>
-          <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-green-400 text-sm font-medium">Canlı</span>
+            <span className="text-blue-400 text-xs font-medium">Testnet</span>
           </div>
         </div>
       </div>
@@ -88,57 +85,43 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Live Chart + Portfolio */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Portfolio Chart */}
-        <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-white font-semibold">Portföy Değeri</h3>
-              <p className="text-gray-400 text-sm">Son 30 gün</p>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={portfolioHistory}>
-              <defs>
-                <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#eab308" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(value: number) => [`$${value.toLocaleString()}`, 'Değer']} />
-              <Area type="monotone" dataKey="value" stroke="#eab308" fill="url(#portfolioGradient)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="lg:col-span-2">
+          <LiveChart />
         </div>
+        <div>
+          <LivePrices />
+        </div>
+      </div>
 
-        {/* BTC Price */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-white font-semibold">BTC/USDT</h3>
-              <p className="text-gray-400 text-sm">$67,250.00</p>
-            </div>
-            <span className="text-green-400 text-sm font-medium bg-green-500/10 px-2 py-1 rounded">+2.35%</span>
+      {/* Portfolio Chart */}
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">Portföy Değeri</h3>
+            <p className="text-gray-400 text-sm">Son 30 gün</p>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={btcPriceHistory}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="time" stroke="#6b7280" fontSize={10} interval={8} />
-              <YAxis stroke="#6b7280" fontSize={10} domain={['auto', 'auto']} tickFormatter={(v) => `$${(v/1000).toFixed(1)}k`} />
-              <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(value: number) => [`$${value.toLocaleString()}`, 'Fiyat']} />
-              <Line type="monotone" dataKey="price" stroke="#22c55e" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
         </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={portfolioHistory}>
+            <defs>
+              <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#eab308" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+            <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }} formatter={(value: number) => [`$${value.toLocaleString()}`, 'Değer']} />
+            <Area type="monotone" dataKey="value" stroke="#eab308" fill="url(#portfolioGradient)" strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Bot Status + Live Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active Bots with Current Actions */}
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <Bot className="w-4 h-4 text-yellow-500" />
@@ -169,7 +152,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Live Activities */}
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4 text-green-500 animate-pulse" />
@@ -197,7 +179,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Open Positions Summary */}
+      {/* Open Positions */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-yellow-500" />
@@ -227,7 +209,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Market Overview */}
+      {/* Market Signals */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4">Piyasa Sinyalleri</h3>
         <div className="overflow-x-auto">

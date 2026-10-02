@@ -1,16 +1,45 @@
 import React, { useState } from 'react';
-import { Key, Bell, Shield, Globe, Save, Eye, EyeOff, CheckCircle, Wifi, Server, DollarSign } from 'lucide-react';
+import { Key, Bell, Shield, Globe, Save, Eye, EyeOff, CheckCircle, Wifi, Server, DollarSign, Loader2 } from 'lucide-react';
+import { binanceAPI } from '../api/binanceService';
 
 const Settings: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [apiKey, setApiKey] = useState('');
+  const [apiSecret, setApiSecret] = useState('');
+  const [useTestnet, setUseTestnet] = useState(true);
   const [notifications, setNotifications] = useState({
     trades: true, profits: true, errors: true, daily: false,
   });
 
   const handleSave = () => {
+    binanceAPI.setCredentials(apiKey, apiSecret, useTestnet);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const testConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      binanceAPI.setCredentials(apiKey, apiSecret, useTestnet);
+      const isAlive = await binanceAPI.ping();
+      if (isAlive) {
+        const serverTime = await binanceAPI.getServerTime();
+        setTestResult({
+          success: true,
+          message: `Bağlantı başarılı! Sunucu zamanı: ${new Date(serverTime).toLocaleString('tr-TR')}`
+        });
+      } else {
+        setTestResult({ success: false, message: 'Bağlantı başarısız. API endpoint\'ine erişilemiyor.' });
+      }
+    } catch (error) {
+      setTestResult({ success: false, message: `Hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` });
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
@@ -65,12 +94,13 @@ const Settings: React.FC = () => {
 
           <div className="space-y-4">
             <div>
-              <label className="text-gray-400 text-sm mb-1 block">API Key (Testnet)</label>
+              <label className="text-gray-400 text-sm mb-1 block">API Key</label>
               <div className="relative">
                 <input
                   type={showApiKey ? 'text' : 'password'}
-                  placeholder="Binance Testnet API Key"
-                  defaultValue="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  placeholder="Binance API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 pr-10"
                 />
                 <button onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
@@ -79,12 +109,13 @@ const Settings: React.FC = () => {
               </div>
             </div>
             <div>
-              <label className="text-gray-400 text-sm mb-1 block">Secret Key (Testnet)</label>
+              <label className="text-gray-400 text-sm mb-1 block">Secret Key</label>
               <div className="relative">
                 <input
                   type={showApiKey ? 'text' : 'password'}
-                  placeholder="Binance Testnet Secret Key"
-                  defaultValue="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  placeholder="Binance Secret Key"
+                  value={apiSecret}
+                  onChange={(e) => setApiSecret(e.target.value)}
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 pr-10"
                 />
                 <button onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
@@ -94,10 +125,29 @@ const Settings: React.FC = () => {
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-1 block">Bağlantı Modu</label>
-              <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-yellow-500">
-                <option>✅ Testnet (Simülasyon - Test Parası)</option>
-                <option>🔴 Gerçek Hesap (DİKKAT!)</option>
+              <select 
+                value={useTestnet ? 'testnet' : 'main'}
+                onChange={(e) => setUseTestnet(e.target.value === 'testnet')}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-yellow-500"
+              >
+                <option value="testnet">✅ Testnet (Simülasyon - Test Parası)</option>
+                <option value="main">🔴 Gerçek Hesap (DİKKAT!)</option>
               </select>
+            </div>
+            <div>
+              <button
+                onClick={testConnection}
+                disabled={testing}
+                className="w-full bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg py-2.5 text-sm font-medium hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
+                {testing ? 'Test Ediliyor...' : 'Bağlantıyı Test Et'}
+              </button>
+              {testResult && (
+                <div className={`mt-2 p-3 rounded-lg text-sm ${testResult.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                  {testResult.message}
+                </div>
+              )}
             </div>
             <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">
               <p className="text-yellow-400 text-xs">
