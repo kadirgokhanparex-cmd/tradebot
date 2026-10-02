@@ -12,10 +12,11 @@ export class BinanceAPI {
   private onStatusChange: (() => void) | null = null;
 
   constructor() {
-    // Default to testnet for safety
+    // Default to MAINNET for WebSocket (read-only data)
+    // Testnet WebSocket doesn't work properly
     this.baseUrl = BINANCE_CONFIG.rest.testnet;
     this.futuresUrl = BINANCE_CONFIG.futures.testnet;
-    this.wsUrl = BINANCE_CONFIG.ws.stream.testnet;
+    this.wsUrl = BINANCE_CONFIG.ws.stream.main; // Use mainnet for live data
   }
 
   /**

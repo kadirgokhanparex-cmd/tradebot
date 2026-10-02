@@ -9,13 +9,15 @@ export class AutoTradingEngine {
   private activities: LiveActivity[] = [];
   private isRunning: boolean = false;
   private scanInterval: ReturnType<typeof setInterval> | null = null;
+  private positionUpdateInterval: ReturnType<typeof setInterval> | null = null;
   private onStateChange: (() => void) | null = null;
+  private simulationMode: boolean = true; // Simülasyon modu aktif
+  private initialCapital: number = 10000;
+  private currentCapital: number = 10000;
 
   constructor() {
-    this.bots = [];
-    this.trades = [];
-    this.openPositions = [];
-    this.activities = [];
+    this.addActivity('Sistem', 'TÜM', 'OTOMATİK TRADING MOTORU HAZIR', 'info',
+      'Simülasyon modu aktif. Başlatmak için "Otomatik Trading Başlat" butonuna tıklayın.');
   }
 
   setOnStateChange(callback: () => void) {
@@ -29,39 +31,58 @@ export class AutoTradingEngine {
       openPositions: this.openPositions,
       activities: this.activities,
       isRunning: this.isRunning,
+      currentCapital: this.currentCapital,
+      totalPnl: this.openPositions.reduce((sum, pos) => sum + pos.pnl, 0),
     };
   }
 
   async start() {
-    if (this.isRunning) return;
-    
+    if (this.isRunning) {
+      console.log('⚠️ Motor zaten çalışıyor');
+      return;
+    }
+
+    console.log('🚀 Otomatik Trading Motoru başlatılıyor...');
     this.isRunning = true;
-    this.addActivity('Sistem', 'TÜM', 'OTOMATİK TRADING BAŞLATILDI', 'info', 
-      'Piyasa tarama ve otomatik işlem motoru aktif. 16 coin taranıyor...');
-    
-    // Start scanning every 30 seconds
+
+    this.addActivity('Sistem', 'TÜM', '🚀 OTOMATİK TRADING BAŞLATILDI', 'info',
+      `${this.simulationMode ? 'Simülasyon' : 'Gerçek'} mod aktif. 16 coin taranacak, her 30 saniyede bir.`);
+
+    // Piyasa tarama - her 30 saniye
     this.scanInterval = setInterval(() => {
       this.scanAndTrade();
     }, 30000);
 
-    // Initial scan
+    // Pozisyon güncelleme - her 10 saniye
+    this.positionUpdateInterval = setInterval(() => {
+      this.updatePositions();
+    }, 10000);
+
+    // İlk taramayı hemen yap
     await this.scanAndTrade();
-    
+
     if (this.onStateChange) this.onStateChange();
   }
 
   async stop() {
     if (!this.isRunning) return;
-    
+
+    console.log('⏹️ Otomatik Trading Motoru durduruluyor...');
     this.isRunning = false;
+
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
-    
-    this.addActivity('Sistem', 'TÜM', 'OTOMATİK TRADING DURDURULDU', 'info', 
-      'Otomatik işlem motoru durduruldu');
-    
+
+    if (this.positionUpdateInterval) {
+      clearInterval(this.positionUpdateInterval);
+      this.positionUpdateInterval = null;
+    }
+
+    this.addActivity('Sistem', 'TÜM', '⏹️ OTOMATİK TRADING DURDURULDU', 'info',
+      'Motor durduruldu. Açık pozisyonlar korunuyor.');
+
     if (this.onStateChange) this.onStateChange();
   }
 
@@ -74,28 +95,44 @@ export class AutoTradingEngine {
       'LINKUSDT', 'UNIUSDT', 'ATOMUSDT', 'FILUSDT', 'NEARUSDT', 'APTUSDT'
     ];
 
-    this.addActivity('Tarama Motoru', 'TÜM', 'PİYASA TARANIYOR', 'analysis', 
-      `${symbols.length} coin taranıyor...`);
+    console.log(`🔍 ${symbols.length} coin taranıyor...`);
+    this.addActivity('Tarama Motoru', 'TÜM', `🔍 PİYASA TARANIYOR`, 'analysis',
+      `${symbols.length} coin için 12 indikatör hesaplanıyor...`);
+
+    let strongSignals = 0;
+    let mediumSignals = 0;
 
     for (const symbol of symbols) {
       try {
-        await this.analyzeAndExecute(symbol);
-        // Small delay to avoid rate limiting
+        const result = await this.analyzeAndExecute(symbol);
+        if (result === 'strong') strongSignals++;
+        else if (result === 'medium') mediumSignals++;
+
+        // Rate limiting - 200ms bekle
         await new Promise(resolve => setTimeout(resolve, 200));
       } catch (error) {
-        console.error(`Error analyzing ${symbol}:`, error);
+        console.error(`❌ ${symbol} analiz hatası:`, error);
       }
     }
+
+    console.log(`✅ Tarama tamamlandı: ${strongSignals} güçlü, ${mediumSignals} orta sinyal`);
+    this.addActivity('Tarama Motoru', 'TÜM', '✅ TARAMA TAMAMLANDI', 'info',
+      `${strongSignals} güçlü sinyal, ${mediumSignals} orta sinyal bulundu`);
 
     if (this.onStateChange) this.onStateChange();
   }
 
-  private async analyzeAndExecute(symbol: string) {
+  private async analyzeAndExecute(symbol: string): Promise<'strong' | 'medium' | 'none'> {
     try {
-      // Get kline data
+      // Kline verisi al
       const klines = await binanceAPI.getKlines(symbol, '1h', 100);
-      
-      // Convert to CandleData
+
+      if (!klines || klines.length === 0) {
+        console.warn(`⚠️ ${symbol} için veri alınamadı`);
+        return 'none';
+      }
+
+      // CandleData formatına çevir
       const candles: CandleData[] = klines.map(k => ({
         open: parseFloat(k.open),
         high: parseFloat(k.high),
@@ -105,23 +142,32 @@ export class AutoTradingEngine {
         timestamp: k.openTime,
       }));
 
-      // Analyze market
+      // Piyasa analizi
       const analysis = analyzeMarket(candles, symbol);
-      
-      // Check if we should trade
+
+      console.log(`📊 ${symbol}: ${analysis.overallSignal} (Güven: %${analysis.confidence})`);
+
+      // STRONG sinyal varsa işlem aç
       if (analysis.overallSignal === 'STRONG_BUY' || analysis.overallSignal === 'STRONG_SELL') {
         await this.executeTrade(symbol, analysis);
-      } else if (analysis.overallSignal === 'BUY' || analysis.overallSignal === 'SELL') {
-        // Log the signal but don't trade (medium confidence)
-        this.addActivity('Sinyal Motoru', symbol, 
-          `${analysis.overallSignal === 'BUY' ? 'AL' : 'SAT'} SİNYALİ`, 
+        return 'strong';
+      }
+
+      // Medium sinyal - sadece log
+      if (analysis.overallSignal === 'BUY' || analysis.overallSignal === 'SELL') {
+        this.addActivity('Sinyal Motoru', symbol,
+          `${analysis.overallSignal === 'BUY' ? '📈 AL' : '📉 SAT'} SİNYALİ`,
           analysis.overallSignal === 'BUY' ? 'buy' : 'sell',
-          `Güven: %${analysis.confidence} - RSI: ${analysis.rsi.value.toFixed(1)}, ADX: ${analysis.adx.adx.toFixed(1)}`,
+          `Güven: %${analysis.confidence.toFixed(0)} | RSI: ${analysis.rsi.value.toFixed(1)} | ADX: ${analysis.adx.adx.toFixed(1)}`,
           analysis.price
         );
+        return 'medium';
       }
+
+      return 'none';
     } catch (error) {
-      console.error(`Error in analyzeAndExecute for ${symbol}:`, error);
+      console.error(`❌ ${symbol} analiz hatası:`, error);
+      return 'none';
     }
   }
 
@@ -129,39 +175,42 @@ export class AutoTradingEngine {
     const pair = symbol.replace('USDT', '/USDT');
     const isStrongBuy = analysis.overallSignal === 'STRONG_BUY';
     const isFutures = analysis.recommendedAction === 'FUTURES_LONG' || analysis.recommendedAction === 'FUTURES_SHORT';
-    
-    // Check if we already have a position
+
+    console.log(`💰 ${symbol} için işlem açılıyor: ${analysis.recommendedAction}`);
+
+    // Zaten pozisyon var mı?
     const existingPosition = this.openPositions.find(p => p.pair === pair);
     if (existingPosition) {
-      this.addActivity('İşlem Motoru', pair, 'POZİSYON ZATEN AÇIK', 'info',
+      console.log(`⚠️ ${pair} için zaten pozisyon var`);
+      this.addActivity('İşlem Motoru', pair, '⚠️ POZİSYON ZATEN AÇIK', 'info',
         `Mevcut pozisyon var, yeni işlem açılmadı`);
       return;
     }
 
-    // Check max positions limit (5)
+    // Maksimum pozisyon limiti (5)
     if (this.openPositions.length >= 5) {
-      this.addActivity('İşlem Motoru', pair, 'MAKSİMUM POZİSYON', 'alert',
+      console.log(`⚠️ Maksimum pozisyon limitine ulaşıldı (5)`);
+      this.addActivity('İşlem Motoru', pair, '⚠️ MAKSİMUM POZİSYON', 'alert',
         `Maksimum 5 açık pozisyon limitine ulaşıldı`);
       return;
     }
 
-    const action = isStrongBuy ? 'STRONG BUY' : 'STRONG SELL';
+    const action = isStrongBuy ? '🟢 STRONG BUY' : '🔴 STRONG SELL';
     const direction = isStrongBuy ? 'LONG' : 'SHORT';
     const leverage = isFutures ? analysis.recommendedLeverage : 1;
-    
-    this.addActivity('İşlem Motoru', pair, `${action} SİNYALİ - İŞLEM AÇILIYOR`, 
+
+    this.addActivity('İşlem Motoru', pair, `${action} SİNYALİ - İŞLEM AÇILIYOR`,
       isStrongBuy ? 'buy' : 'sell',
-      `${isFutures ? `${leverage}x Futures ${direction}` : 'Spot'} - Güven: %${analysis.confidence}`,
+      `${isFutures ? `${leverage}x Futures ${direction}` : 'Spot'} | Güven: %${analysis.confidence.toFixed(0)}`,
       analysis.price
     );
 
     try {
-      // Calculate position size (10% of capital per trade)
-      const capital = 10000; // Initial capital
-      const positionSize = capital * 0.1; // 10% per trade
+      // Pozisyon boyutu (sermayenin %10'u)
+      const positionSize = this.currentCapital * 0.1;
       const quantity = positionSize / analysis.price;
 
-      // Create position
+      // Pozisyon oluştur
       const position: OpenPosition = {
         id: Date.now().toString(),
         botId: 'auto',
@@ -178,12 +227,12 @@ export class AutoTradingEngine {
         openedAt: new Date().toISOString(),
         stopLoss: this.calculateStopLoss(analysis.price, direction, analysis.atr),
         takeProfit: this.calculateTakeProfit(analysis.price, direction, analysis.atr),
-        strategy: isStrongBuy ? 'Strong Signal' : 'Signal',
+        strategy: 'Strong Signal',
       };
 
       this.openPositions.push(position);
 
-      // Create trade record
+      // Trade kaydı
       const trade: Trade = {
         id: Date.now().toString(),
         botId: 'auto',
@@ -202,14 +251,16 @@ export class AutoTradingEngine {
 
       this.trades.push(trade);
 
-      this.addActivity('İşlem Motoru', pair, `${direction} POZİSYON AÇILDI`, 
+      console.log(`✅ ${pair} pozisyonu açıldı: ${direction} @ $${analysis.price.toFixed(2)}`);
+      this.addActivity('İşlem Motoru', pair, `✅ ${direction} POZİSYON AÇILDI`,
         isStrongBuy ? 'buy' : 'sell',
-        `${quantity.toFixed(6)} @ $${analysis.price.toLocaleString()} - SL: $${position.stopLoss.toFixed(2)} - TP: $${position.takeProfit.toFixed(2)}`,
+        `${quantity.toFixed(6)} @ $${analysis.price.toLocaleString()} | SL: $${position.stopLoss.toFixed(2)} | TP: $${position.takeProfit.toFixed(2)}`,
         analysis.price
       );
 
     } catch (error) {
-      this.addActivity('İşlem Motoru', pair, 'HATA', 'alert',
+      console.error(`❌ İşlem açma hatası:`, error);
+      this.addActivity('İşlem Motoru', pair, '❌ HATA', 'alert',
         `İşlem açılamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
     }
   }
@@ -245,53 +296,57 @@ export class AutoTradingEngine {
     };
 
     this.activities.unshift(activity);
-    
-    // Keep only last 50 activities
+
+    // Son 50 aktiviteyi tut
     if (this.activities.length > 50) {
       this.activities = this.activities.slice(0, 50);
     }
   }
 
-  // Update positions with current prices
+  // Pozisyonları güncelle
   async updatePositions() {
-    for (const position of this.openPositions) {
-      try {
-        const prices = await binanceAPI.getAllPrices();
-        const priceData = prices.find(p => p.symbol === position.pair.replace('/', ''));
-        
+    if (this.openPositions.length === 0) return;
+
+    try {
+      const prices = await binanceAPI.getAllPrices();
+
+      for (const position of this.openPositions) {
+        const symbol = position.pair.replace('/', '');
+        const priceData = prices.find(p => p.symbol === symbol);
+
         if (priceData) {
           const currentPrice = parseFloat(priceData.price);
           position.currentPrice = currentPrice;
-          
-          // Calculate PnL
+
+          // PnL hesapla
           if (position.type === 'LONG') {
             position.pnl = (currentPrice - position.entryPrice) * position.amount * position.leverage;
           } else {
             position.pnl = (position.entryPrice - currentPrice) * position.amount * position.leverage;
           }
-          
+
           position.pnlPercent = (position.pnl / (position.entryPrice * position.amount)) * 100 * position.leverage;
 
-          // Check stop loss
+          // Stop Loss kontrolü
           if (position.type === 'LONG' && currentPrice <= position.stopLoss) {
             await this.closePosition(position.id, 'Stop Loss');
           } else if (position.type === 'SHORT' && currentPrice >= position.stopLoss) {
             await this.closePosition(position.id, 'Stop Loss');
           }
-          
-          // Check take profit
+
+          // Take Profit kontrolü
           if (position.type === 'LONG' && currentPrice >= position.takeProfit) {
             await this.closePosition(position.id, 'Take Profit');
           } else if (position.type === 'SHORT' && currentPrice <= position.takeProfit) {
             await this.closePosition(position.id, 'Take Profit');
           }
         }
-      } catch (error) {
-        console.error(`Error updating position ${position.pair}:`, error);
       }
-    }
 
-    if (this.onStateChange) this.onStateChange();
+      if (this.onStateChange) this.onStateChange();
+    } catch (error) {
+      console.error('❌ Pozisyon güncelleme hatası:', error);
+    }
   }
 
   private async closePosition(positionId: string, reason: string) {
@@ -299,17 +354,26 @@ export class AutoTradingEngine {
     if (!position) return;
 
     const pnl = position.pnl;
-    
-    // Update trade with profit
-    const trade = this.trades.find(t => t.botId === position.botId && t.pair === position.pair && t.type === (position.type === 'LONG' ? 'BUY' : 'SELL'));
+
+    // Trade'i güncelle
+    const trade = this.trades.find(t =>
+      t.botId === position.botId &&
+      t.pair === position.pair &&
+      t.type === (position.type === 'LONG' ? 'BUY' : 'SELL')
+    );
+
     if (trade) {
       trade.profit = pnl;
     }
 
-    // Remove position
+    // Pozisyonu kapat
     this.openPositions = this.openPositions.filter(p => p.id !== positionId);
 
-    this.addActivity('İşlem Motoru', position.pair, `POZİSYON KAPATILDI - ${reason}`, 
+    // Sermayeyi güncelle
+    this.currentCapital += pnl;
+
+    console.log(`✅ ${position.pair} pozisyonu kapatıldı (${reason}): ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`);
+    this.addActivity('İşlem Motoru', position.pair, `✅ POZİSYON KAPATILDI - ${reason}`,
       pnl >= 0 ? 'buy' : 'sell',
       `PnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${position.pnlPercent >= 0 ? '+' : ''}${position.pnlPercent.toFixed(2)}%)`,
       position.currentPrice

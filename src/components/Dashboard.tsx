@@ -28,10 +28,13 @@ const Dashboard: React.FC = () => {
   }, [isAutoTrading]);
 
   const handleToggleAutoTrading = async () => {
+    console.log('🔄 Otomatik trading durumu değiştiriliyor...');
     if (isAutoTrading) {
+      console.log('⏹️ Durduruluyor...');
       await autoTradingEngine.stop();
       setIsAutoTrading(false);
     } else {
+      console.log('🚀 Başlatılıyor...');
       await autoTradingEngine.start();
       setIsAutoTrading(true);
     }
@@ -83,7 +86,7 @@ const Dashboard: React.FC = () => {
             <span className="text-gray-400 text-sm">Toplam Portföy</span>
             <DollarSign className="w-5 h-5 text-yellow-500" />
           </div>
-          <p className="text-2xl font-bold text-white">${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-white">${engineState.currentCapital.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
           <div className="flex items-center gap-1 mt-2">
             <span className="text-gray-400 text-xs">Başlangıç: $10,000</span>
           </div>
