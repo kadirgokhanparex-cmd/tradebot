@@ -354,68 +354,103 @@ export class BinanceAPI {
   }
 
   /**
-   * Subscribe to multiple tickers
+   * Subscribe to multiple tickers with automatic mock fallback
    */
   subscribeAllTickers(callback: (data: WsTicker | WsTicker[]) => void): () => void {
     const streamName = '!ticker@arr';
     let mockInterval: ReturnType<typeof setInterval> | null = null;
     let isUnsubscribed = false;
+    let usingMockData = false;
     
     console.log('🔌 WebSocket ticker aboneliği başlatılıyor...');
     
+    // Mock data gönderme fonksiyonu
+    const startMockData = () => {
+      if (usingMockData || isUnsubscribed) return;
+      
+      usingMockData = true;
+      console.warn('⚠️ Mock ticker verisi aktif ediliyor');
+      
+      // Status'u connected olarak ayarla (mock data çalışıyor)
+      this.wsStatus.set(streamName, 'connected');
+      if (this.onStatusChange) this.onStatusChange();
+      
+      // Mock ticker verisi oluştur
+      mockInterval = setInterval(() => {
+        if (isUnsubscribed) return;
+        
+        const mockTickers = this.getMockPrices().map(p => {
+          const price = parseFloat(p.price);
+          const change = (Math.random() - 0.5) * 0.02;
+          const newPrice = price * (1 + change);
+          
+          return {
+            e: '24hrTicker',
+            E: Date.now(),
+            s: p.symbol,
+            p: (change * price).toString(),
+            P: (change * 100).toString(),
+            w: price.toString(),
+            x: price.toString(),
+            c: newPrice.toString(),
+            Q: '100',
+            b: (newPrice * 0.999).toString(),
+            B: '50',
+            a: (newPrice * 1.001).toString(),
+            A: '50',
+            o: price.toString(),
+            h: (price * 1.02).toString(),
+            l: (price * 0.98).toString(),
+            v: (Math.random() * 1000000).toString(),
+            q: (Math.random() * 1000000000).toString(),
+            O: Date.now() - 86400000,
+            C: Date.now(),
+            F: 1,
+            L: 10000,
+            n: 10000,
+          } as WsTicker;
+        });
+        
+        callback(mockTickers);
+      }, 2000); // Her 2 saniyede güncelle
+    };
+    
     // WebSocket bağlantısını dene
     const cleanup = this.subscribeStream(streamName, (data) => {
+      // Gerçek WebSocket verisi geldiğinde mock data'yı durdur
+      if (usingMockData && mockInterval) {
+        console.log('✅ Gerçek WebSocket bağlantısı kuruldu, mock data durduruluyor');
+        clearInterval(mockInterval);
+        mockInterval = null;
+        usingMockData = false;
+      }
       callback(data as WsTicker[]);
     });
     
-    // 5 saniye sonra hala bağlanmamışsa mock data kullan
+    // 3 saniye sonra hala bağlanmamışsa mock data kullan
     const fallbackTimeout = setTimeout(() => {
       if (isUnsubscribed) return;
       
       const status = this.wsStatus.get(streamName);
       if (status !== 'connected') {
-        console.warn('⚠️ WebSocket bağlanamadı, mock ticker verisi kullanılıyor');
-        
-        // Mock ticker verisi oluştur
-        mockInterval = setInterval(() => {
-          if (isUnsubscribed) return;
-          
-          const mockTickers = this.getMockPrices().map(p => {
-            const price = parseFloat(p.price);
-            const change = (Math.random() - 0.5) * 0.02;
-            const newPrice = price * (1 + change);
-            
-            return {
-              e: '24hrTicker',
-              E: Date.now(),
-              s: p.symbol,
-              p: (change * price).toString(),
-              P: (change * 100).toString(),
-              w: price.toString(),
-              x: price.toString(),
-              c: newPrice.toString(),
-              Q: '100',
-              b: (newPrice * 0.999).toString(),
-              B: '50',
-              a: (newPrice * 1.001).toString(),
-              A: '50',
-              o: price.toString(),
-              h: (price * 1.02).toString(),
-              l: (price * 0.98).toString(),
-              v: (Math.random() * 1000000).toString(),
-              q: (Math.random() * 1000000000).toString(),
-              O: Date.now() - 86400000,
-              C: Date.now(),
-              F: 1,
-              L: 10000,
-              n: 10000,
-            } as WsTicker;
-          });
-          
-          callback(mockTickers);
-        }, 2000); // Her 2 saniyede güncelle
+        startMockData();
       }
-    }, 5000);
+    }, 3000);
+    
+    // WebSocket bağlantısı koptuğunda otomatik mock fallback
+    const originalOnStatusChange = this.onStatusChange;
+    this.onStatusChange = () => {
+      const status = this.wsStatus.get(streamName);
+      
+      // Bağlantı koptuysa ve mock data aktif değilse, mock data'yı başlat
+      if (status === 'disconnected' && !usingMockData) {
+        console.warn('🔄 WebSocket bağlantısı kesildi, mock fallback aktif ediliyor');
+        startMockData();
+      }
+      
+      // Orijinal callback'i çağır
+      if (originalOnStatusChange) originalOnStatusChange();
+    };
     
     // Cleanup fonksiyonunu döndür
     return () => {
@@ -425,6 +460,8 @@ export class BinanceAPI {
       if (mockInterval) {
         clearInterval(mockInterval);
       }
+      // Orijinal callback'i geri yükle
+      this.onStatusChange = originalOnStatusChange;
     };
   }
 

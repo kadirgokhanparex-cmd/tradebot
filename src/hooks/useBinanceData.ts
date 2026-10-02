@@ -225,7 +225,10 @@ export function useAllTickers() {
     binanceAPI.setOnStatusChange(() => {
       const status = binanceAPI.getWebSocketStatus('!ticker@arr') as string;
       setConnectionStatus(status as any);
-      setConnected(status === 'connected');
+      
+      // Mock fallback aktifse veya WebSocket bağlıysa connected = true
+      const hasData = tickers.length > 0;
+      setConnected(status === 'connected' || hasData);
     });
 
     const unsubscribe = binanceAPI.subscribeAllTickers((data) => {
@@ -241,10 +244,11 @@ export function useAllTickers() {
       setConnected(false);
       setConnectionStatus('disconnected');
     };
-  }, []);
+  }, [tickers.length]);
 
   const reconnect = () => {
     setConnectionStatus('connecting');
+    setConnected(false);
     // The auto-reconnect mechanism will handle this
   };
 

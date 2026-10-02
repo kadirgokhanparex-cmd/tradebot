@@ -61,6 +61,8 @@ const LivePrices: React.FC = () => {
               <RefreshCw className="w-6 h-6 text-yellow-500 animate-spin" />
             ) : connectionStatus === 'error' ? (
               <WifiOff className="w-6 h-6 text-red-500" />
+            ) : connectionStatus === 'disconnected' ? (
+              <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
             ) : (
               <Activity className="w-6 h-6 text-gray-500" />
             )}
@@ -91,12 +93,13 @@ const LivePrices: React.FC = () => {
           )}
           {connectionStatus === 'disconnected' && (
             <>
-              <p className="text-gray-400 text-sm mb-3">Bağlantı kesildi</p>
+              <p className="text-orange-400 text-sm font-medium mb-1">Yeniden bağlanılıyor...</p>
+              <p className="text-gray-500 text-xs mb-3">WebSocket bağlantısı kesildi, otomatik yeniden bağlanma deneniyor</p>
               <button
                 onClick={reconnect}
                 className="text-xs text-blue-400 hover:text-blue-300 underline"
               >
-                Yeniden bağlan
+                Manuel yeniden bağlan
               </button>
             </>
           )}
