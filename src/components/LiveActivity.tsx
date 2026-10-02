@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Activity, ArrowUpRight, ArrowDownRight, BarChart3, AlertTriangle, Info, Zap, TrendingUp, Clock } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { mockLiveActivities, mockOpenPositions, mockBots, generatePriceHistory, generateIndicatorChart } from '../data';
@@ -8,8 +8,10 @@ const LiveActivityPanel: React.FC = () => {
   const [activities, setActivities] = useState<LiveActivity[]>(mockLiveActivities);
   const [selectedPosition, setSelectedPosition] = useState<OpenPosition | null>(null);
   const [chartPair, setChartPair] = useState('BTC/USDT');
-  const priceData = generatePriceHistory(67250, 60);
-  const rsiData = generateIndicatorChart('RSI');
+  
+  // Memoize data to prevent re-creation on every render
+  const priceData = useMemo(() => generatePriceHistory(67250, 60), []);
+  const rsiData = useMemo(() => generateIndicatorChart('RSI'), []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,8 +61,8 @@ const LiveActivityPanel: React.FC = () => {
     }
   };
 
-  const totalPnl = mockOpenPositions.reduce((sum, p) => sum + p.pnl, 0);
-  const totalMargin = mockOpenPositions.reduce((sum, p) => sum + (p.entryPrice * p.amount) / p.leverage, 0);
+  const totalPnl = useMemo(() => mockOpenPositions.reduce((sum, p) => sum + p.pnl, 0), []);
+  const totalMargin = useMemo(() => mockOpenPositions.reduce((sum, p) => sum + (p.entryPrice * p.amount) / p.leverage, 0), []);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">

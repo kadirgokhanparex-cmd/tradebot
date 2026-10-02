@@ -1,19 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Bot, Target, ArrowUpRight, ArrowDownRight, Zap, Shield } from 'lucide-react';
-import { mockBots, mockTrades, mockMarketData, mockOpenPositions, mockLiveActivities, generatePortfolioHistory, generatePriceHistory } from '../data';
+import { mockBots, mockMarketData, mockOpenPositions, mockLiveActivities, generatePortfolioHistory, generatePriceHistory } from '../data';
 
 const Dashboard: React.FC = () => {
-  const portfolioHistory = generatePortfolioHistory();
-  const btcPriceHistory = generatePriceHistory(67250);
+  // Memoize data to prevent re-creation on every render
+  const portfolioHistory = useMemo(() => generatePortfolioHistory(), []);
+  const btcPriceHistory = useMemo(() => generatePriceHistory(67250), []);
   
-  const totalValue = mockBots.reduce((sum, bot) => sum + bot.currentValue, 0);
-  const totalProfit = mockBots.reduce((sum, bot) => sum + bot.profit, 0);
-  const totalInvestment = mockBots.reduce((sum, bot) => sum + bot.investment, 0);
-  const totalProfitPercent = (totalProfit / totalInvestment) * 100;
-  const activeBots = mockBots.filter(b => b.status === 'running').length;
+  const totalValue = useMemo(() => mockBots.reduce((sum, bot) => sum + bot.currentValue, 0), []);
+  const totalProfit = useMemo(() => mockBots.reduce((sum, bot) => sum + bot.profit, 0), []);
+  const totalInvestment = useMemo(() => mockBots.reduce((sum, bot) => sum + bot.investment, 0), []);
+  const totalProfitPercent = useMemo(() => (totalProfit / totalInvestment) * 100, [totalProfit, totalInvestment]);
+  const activeBots = useMemo(() => mockBots.filter(b => b.status === 'running').length, []);
   const todayProfit = 485.32;
-  const totalPnl = mockOpenPositions.reduce((sum, p) => sum + p.pnl, 0);
+  const totalPnl = useMemo(() => mockOpenPositions.reduce((sum, p) => sum + p.pnl, 0), []);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">

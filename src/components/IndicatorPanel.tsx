@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingUp, Activity, BarChart3, Waves, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { mockIndicators, generateIndicatorChart } from '../data';
-import { Indicator } from '../types';
 
 const IndicatorPanel: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedIndicator, setExpandedIndicator] = useState<string | null>(null);
+  
+  // Memoize chart data for each indicator
+  const indicatorCharts = useMemo(() => {
+    const charts: Record<string, { time: string; value: number }[]> = {};
+    mockIndicators.forEach(ind => {
+      charts[ind.name] = generateIndicatorChart(ind.name);
+    });
+    return charts;
+  }, []);
 
   const categories = [
     { id: 'all', name: 'Tümü', icon: Activity, color: 'text-yellow-400' },
@@ -96,7 +104,7 @@ const IndicatorPanel: React.FC = () => {
       <div className="space-y-4">
         {filteredIndicators.map((indicator) => {
           const isExpanded = expandedIndicator === indicator.id;
-          const chartData = generateIndicatorChart(indicator.name);
+          const chartData = indicatorCharts[indicator.name] || [];
 
           return (
             <div key={indicator.id} className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">

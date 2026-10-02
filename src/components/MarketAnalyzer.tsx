@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Filter, TrendingUp, TrendingDown, Minus, Zap, Shield, AlertTriangle, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, Filter, TrendingUp, TrendingDown, Minus, Zap, Shield, AlertTriangle, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { mockMarketData } from '../data';
 import { MarketData } from '../types';
@@ -10,7 +10,7 @@ const MarketAnalyzer: React.FC = () => {
   const [sortBy, setSortBy] = useState('change24h');
   const [selectedCoin, setSelectedCoin] = useState<MarketData | null>(null);
 
-  const filteredData = mockMarketData
+  const filteredData = useMemo(() => mockMarketData
     .filter(coin => {
       const matchesSearch = coin.pair.toLowerCase().includes(searchTerm.toLowerCase()) || coin.symbol.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesSignal = signalFilter === 'all' || coin.signal === signalFilter;
@@ -23,7 +23,7 @@ const MarketAnalyzer: React.FC = () => {
         case 'rsi': return a.rsi - b.rsi;
         default: return 0;
       }
-    });
+    }), [searchTerm, signalFilter, sortBy]);
 
   const getSignalColor = (signal: string) => {
     switch (signal) {
@@ -73,11 +73,11 @@ const MarketAnalyzer: React.FC = () => {
     { subject: 'Güven', value: selectedCoin.signal === 'STRONG_BUY' ? 90 : selectedCoin.signal === 'BUY' ? 70 : selectedCoin.signal === 'NEUTRAL' ? 50 : selectedCoin.signal === 'SELL' ? 30 : 10 },
   ] : [];
 
-  const volumeData = mockMarketData.slice(0, 8).map(coin => ({
+  const volumeData = useMemo(() => mockMarketData.slice(0, 8).map(coin => ({
     name: coin.symbol,
     volume: coin.volume24h / 1000000000,
     change: coin.change24h,
-  }));
+  })), []);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">
@@ -284,7 +284,7 @@ const MarketAnalyzer: React.FC = () => {
               <div>
                 <h4 className="text-white font-medium mb-3">Teknik Analiz Özeti</h4>
                 <ResponsiveContainer width="100%" height={220}>
-                  <RadarChart data={radarData}>
+                  <RadarChart data={radarData && radarData.length > 0 ? radarData : []}>
                     <PolarGrid stroke="#374151" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
                     <PolarRadiusAxis tick={false} domain={[0, 100]} />
